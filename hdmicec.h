@@ -30,6 +30,7 @@ struct cec_framedata {
 #define HDMI_CEC_VERSION 0x05
 #define HDMI_CEC_VENDOR_ID 0x000001
 #define HDMI_CEC_PORT_ID 0x000001
+#define HDMI_CEC_HAL_VERSION "1.0"
 
 #define HDMI_CEC_MAGIC 'N'
 #define HDMI_IOCTL_CECSEND   _IOW(HDMI_CEC_MAGIC, 0 ,struct cec_framedata)
@@ -39,6 +40,7 @@ struct cec_framedata {
 #define HDMI_IOCTL_CECREAD   _IOR(HDMI_CEC_MAGIC, 4, struct cec_framedata)
 #define HDMI_IOCTL_CECSETLA  _IOW(HDMI_CEC_MAGIC, 5, int)
 #define HDMI_IOCTL_CECCLEARLA  _IOW(HDMI_CEC_MAGIC, 6, int)
+#define HDMI_IOCTL_CECWAKESTATE  _IOR(HDMI_CEC_MAGIC, 7, int)
 
 #define HDMI_STATE_PATH "/sys/devices/virtual/switch/hdmi/state"
 #define HDMI_DEV_PATH   "/dev/cec"

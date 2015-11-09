@@ -21,6 +21,7 @@
 #include <cutils/atomic.h>
 #include <stdlib.h>
 #include <hdmicec.h>
+#include <cutils/properties.h>
 
 static int hdmi_cec_device_open(const struct hw_module_t* module, const char* name,
 				struct hw_device_t** device);
@@ -77,6 +78,10 @@ static int hdmi_cec_get_physical_address(const struct hdmi_cec_device* dev, uint
 	int ret;
 	int val;
 
+	if (addr == NULL) {
+		ALOGI("%s addr is null", __func__);
+		return -1;
+	}
 	ALOGI("%s", __func__);
 	val = 0;
 	if (ctx->fd < 0)
@@ -84,10 +89,10 @@ static int hdmi_cec_get_physical_address(const struct hdmi_cec_device* dev, uint
 	ret = ioctl(ctx->fd, HDMI_IOCTL_CECPHY, &val);
 	*addr = val;
 	ALOGI("%s val = %x", __func__, val);
-	if (ret)
-		return *addr;
-
-	return 0;
+	if (!ret)
+		return 0;
+	else
+		return -1;
 }
 
 static int hdmi_cec_send_message(const struct hdmi_cec_device* dev, const cec_message_t* message)
@@ -95,11 +100,28 @@ static int hdmi_cec_send_message(const struct hdmi_cec_device* dev, const cec_me
 	struct hdmi_cec_context_t* ctx = (struct hdmi_cec_context_t*)dev;
 	int ret, fd;
 	struct cec_framedata cecframe;
+	int cecwakestate;
+	int i;
 
 	ALOGI("%s", __func__);
 	ret = 0;
 	if (ctx->fd < 0)
 		return -1;
+
+	i = 30;
+	while(i--) {
+		ret = ioctl(ctx->fd, HDMI_IOCTL_CECWAKESTATE, &cecwakestate);
+		if (cecwakestate != 0) {
+			ALOGI("cecwakestate = %d , i = %d", cecwakestate, i);
+			usleep(40*1000);
+		} else {
+			break;
+		}
+		if (i == 0) {
+			ALOGE("%s i = %d HDMI_RESULT_FAIL", __func__, i);
+			return HDMI_RESULT_NACK;
+		}
+	}
 
 	cecframe.srcdestaddr = (message->initiator << 4) | message->destination;
 	cecframe.argcount = message->length - 1;
@@ -108,6 +130,8 @@ static int hdmi_cec_send_message(const struct hdmi_cec_device* dev, const cec_me
 		cecframe.argcount = 0;
 	for (ret = 0; ret < cecframe.argcount; ret++)
 		cecframe.args[ret] = message->body[ret + 1];
+	if (cecframe.opcode == 0x90)
+		cecframe.args[0] = 0;
 	ret = ioctl(ctx->fd, HDMI_IOCTL_CECSEND, &cecframe);
  	if (ret)
 		return HDMI_RESULT_FAIL;
@@ -266,6 +290,7 @@ static int hdmi_cec_device_open(const struct hw_module_t* module, const char* na
 		ALOGE("%s open error!", __func__);
 	}
 	ALOGI("%s dev->fd = %d", __func__, dev->fd);
+	property_set("sys.hdmicec.version",HDMI_CEC_HAL_VERSION);
 	*device = &dev->device.common;
 	init_uevent_thread(dev);
 	

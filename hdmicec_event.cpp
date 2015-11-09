@@ -32,6 +32,15 @@
 
 #define HDMI_CEC_UEVENT_THREAD_NAME "HdmiCecThread"
 
+static int validcecmessage(hdmi_event_t cec_event)
+{
+	int ret = 0;
+
+	if (cec_event.cec.length > 15)
+		ret = 1;
+	return ret;
+}
+
 static void *uevent_loop(void *param)
 {
 	const int MAX_DATA = 64;
@@ -71,6 +80,7 @@ static void *uevent_loop(void *param)
 				const char *str = vdata;
 				int state = strtoull(str, NULL, 0);
 				ALOGD("cec state is %d", state);
+				memset(&cec_event, 0, sizeof(hdmi_event_t));
 				if (state == 0 || state == 1) {
 					ALOGD("%s sending hotplug: connected = %d ",
 				 	      __FUNCTION__, state);
@@ -90,13 +100,17 @@ static void *uevent_loop(void *param)
 					if (ret < 0) {
 						ALOGE("%s hdmi cec read error", __FUNCTION__);
 						continue;
-					}				
+					}
 					cec_event.type = HDMI_EVENT_CEC_MESSAGE;
 					cec_event.dev = &ctx->device;
 					cec_event.cec.initiator = (cec_logical_address_t)(cecframe.srcdestaddr >> 4);
 					cec_event.cec.destination = (cec_logical_address_t)(cecframe.srcdestaddr & 0x0f);
 					cec_event.cec.length = cecframe.argcount + 1;
 					cec_event.cec.body[0] = cecframe.opcode;
+					if (validcecmessage(cec_event)) {
+						ALOGE("%s cec_event length > 15 ", __func__);
+						continue;
+					}
 					for (ret = 0; ret < cecframe.argcount; ret++) {
 						cec_event.cec.body [ret + 1] = cecframe.args[ret];
 					}
