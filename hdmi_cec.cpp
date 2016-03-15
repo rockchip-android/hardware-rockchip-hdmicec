@@ -20,6 +20,7 @@
 #include <cutils/log.h>
 #include <cutils/atomic.h>
 #include <stdlib.h>
+#include <string.h>
 #include <hdmicec.h>
 #include <cutils/properties.h>
 

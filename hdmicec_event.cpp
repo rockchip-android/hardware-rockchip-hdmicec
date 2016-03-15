@@ -28,6 +28,7 @@
 #include <fcntl.h>
 #include <poll.h>
 #include <hardware/hdmi_cec.h>
+#include <errno.h>
 #include <hdmicec.h>
 
 #define HDMI_CEC_UEVENT_THREAD_NAME "HdmiCecThread"
